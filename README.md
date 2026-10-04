@@ -43,6 +43,17 @@ cod-stats/
 - Automated CI checks before merging to `main`
 - AI-assisted work documented in `AI_USAGE.md`
 
+## Database
+
+The initial PostgreSQL schema is located in `apps/api/migrations`.
+
+Core tables:
+
+- `games`
+- `players`
+- `player_stats`
+- `matches`
+
 ## Getting Started
 
 ### Prerequisites
@@ -98,46 +109,7 @@ The Expo application will be developed under:
 apps/mobile
 ```
 
-## Branching Strategy
 
-Use descriptive feature branches:
-
-```text
-feature/player-search
-feature/player-stats
-feature/match-history
-chore/database-migrations
-fix/api-validation
-docs/update-readme
-```
-
-Do not commit directly to `main`.
-
-## Conventional Commits
-
-Examples:
-
-```text
-feat: add player search endpoint
-feat: add player stats screen
-fix: validate empty usernames
-chore: add postgres migration
-docs: update api setup instructions
-test: add player service tests
-ci: add mobile type check
-```
-
-## Pull Requests
-
-Every feature should be submitted through a pull request.
-
-Recommended repository protection for `main`:
-
-- Require pull requests
-- Require at least one peer approval
-- Require CI checks to pass
-- Require branches to be up to date before merging
-- Do not allow force pushes to `main`
 
 ## AI-Assisted Development
 
