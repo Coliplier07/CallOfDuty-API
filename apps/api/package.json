@@ -1,0 +1,33 @@
+{
+  "name": "@cod-stats/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "REST API and PostgreSQL migration runner for COD Stats",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "test": "node --test",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate:status": "tsx src/db/migrate.ts --status"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.5.2",
+    "@types/pg": "^8.15.5",
+    "eslint": "^9.36.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.0"
+  }
+}
