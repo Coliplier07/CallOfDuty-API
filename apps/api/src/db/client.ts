@@ -9,8 +9,5 @@ if (!connectionString) {
 
 export const pool = new Pool({
   connectionString,
+  connectionTimeoutMillis: 5000,
 });
-
-export async function closeDatabase(): Promise<void> {
-  await pool.end();
-}
