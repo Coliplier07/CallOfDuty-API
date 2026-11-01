@@ -49,10 +49,15 @@ The initial PostgreSQL schema is located in `apps/api/migrations`.
 
 Core tables:
 
-- `games`
-- `players`
-- `player_stats`
-- `matches`
+- `games` — supported Call of Duty titles
+- `platforms` — normalized player platforms
+- `players` — player identities
+- `player_stats` — aggregate statistics per player and game
+- `maps` and `game_modes` — game-specific lookup data
+- `matches` — match-level metadata
+- `match_players` — each participant's match performance
+
+The schema evolves through numbered SQL migrations. Migration `003_normalize_database.sql` upgrades the original player-centric match design to the normalized structure while preserving existing records. See [Project Check-in 2: Normalization](./docs/check-in-2-normalization.md) for the ER diagram, 1NF-to-3NF walkthrough, functional dependencies, anomalies, and design reflection.
 
 ## Getting Started
 
