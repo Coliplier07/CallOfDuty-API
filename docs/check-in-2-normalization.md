@@ -25,7 +25,7 @@ The final design contains eight tables:
 
 ```mermaid
 erDiagram
-    PLATFORMS ||--o{ PLAYERS : identifies
+    PLATFORMS o|--o{ PLAYERS : identifies
     PLAYERS ||--o{ PLAYER_STATS : owns
     GAMES ||--o{ PLAYER_STATS : summarizes
     GAMES ||--o{ MAPS : contains
@@ -96,6 +96,18 @@ erDiagram
 
 The map and mode foreign keys are composite with `game_id`. This prevents a match for one Call of Duty title from referencing a map or mode belonging to another title. `match_players` has a composite primary key of `(match_id, player_id)`, so a player can appear only once in a given match.
 
+## ER diagram relationship guide
+
+Read the crow's-foot relationships in the ER diagram as follows:
+
+- One platform can be associated with many players; a player's platform reference is optional because the source schema allowed an unknown or unprovided platform.
+- One player can have many aggregate-stat rows, and one game can have many aggregate-stat rows. The unique constraint on `player_stats(player_id, game_id)` limits each player to one aggregate row per game.
+- One game can define many maps, game modes, and matches. Map and mode names are unique within a game, rather than globally.
+- A match may reference one map and one game mode, or neither when the source data does not provide them. The composite foreign keys require any referenced map and mode to belong to the same game as the match.
+- Players and matches have a many-to-many relationship resolved by `match_players`. Its composite primary key `(match_id, player_id)` prevents duplicate participation rows for the same player and match.
+
+The diagram shows logical relationships; the SQL migrations are the authoritative source for nullability, uniqueness, check constraints, and delete behavior.
+
 ## Normalization walkthrough
 
 The sample facts below are illustrative and use the same values at each stage. The sample player IDs and match IDs are labels for explanation; production tables use UUIDs.
@@ -121,16 +133,18 @@ Expand the repeating group so each row represents one player's participation in 
 | P001 | Ghost#1234 | PC | G001 | Black Ops 6 | 2024 | M002 | Protocol | Domination | 18 | 12 | win |
 | P002 | Reaper#5678 | Xbox | G001 | Black Ops 6 | 2024 | M001 | Skyline | Team Deathmatch | 20 | 15 | loss |
 
-For this flattened relation, the natural row identifier is `(player_id, game_id, match_id)). All values are atomic and each participation is represented once.
+For this flattened relation, the candidate key is `(player_id, match_id)`: one player can participate in a given match only once. `game_id` is included as a foreign key because the match belongs to a game, but it is not needed in the participation key when `match_id` is globally unique. All values are atomic and each participation is represented once.
 
 ### Second Normal Form (2NF)
 
-The 1NF relation has partial dependencies on parts of its composite key:
+The 1NF relation has partial dependencies on parts of its composite key `(player_id, match_id)`:
 
 - `player_id -> username, platform`
+- `match_id -> game_id, map, mode, played_at`
+- `(match_id, player_id) -> kills, deaths, assists, result, score`
 - `game_id -> game name, release year`
-- `(game_id, match_id) -> map, mode, match date/time`
-- `(match_id, player_id) -> kills, deaths, result, score`
+
+Because `match_id` identifies one match, it determines the game and the match-level attributes. The participation key determines only the performance facts for that player in that match.
 
 Separate player, game, match, and participation facts. At this stage platform, map, and mode can still be text attributes; those remaining transitive/reference dependencies are addressed in 3NF.
 
@@ -162,7 +176,7 @@ Separate player, game, match, and participation facts. At this stage platform, m
 | M002 | P001 | 18 | 12 | win |
 | M001 | P002 | 20 | 15 | loss |
 
-The player-specific performance now depends on the whole participation key, not just the match or player alone.
+The player-specific performance now depends on the whole participation key, not just the match or player alone. The `game_id` dependency is represented through the match relationship; the game title and release year are stored once in `games`.
 
 ### Third Normal Form (3NF)
 
@@ -208,6 +222,27 @@ The migration preserves existing player statistics and player-match performance.
 - Check constraints reject negative performance counts and invalid match results.
 - The participant primary key prevents duplicate player participation rows for one match.
 - Foreign-key deletion behavior is deliberate: deleting a player removes their dependent stats and participation rows; deleting a game removes its dependent catalog and match data.
+
+## Database integrity test results
+
+The normalized schema was tested against the local PostgreSQL `cod_stats` database using fictional sample records:
+
+- Inserted two platform records (PC and Xbox) and two sample players (Ghost#1234 and Reaper#5678).
+- Inserted two Black Ops 6 maps (Skyline and Protocol) and two game modes (Team Deathmatch and Domination).
+- Inserted one aggregate player-statistics row and two match records.
+- Inserted three player-match participation rows across those two matches.
+- Queried the joined `match_players`, `players`, `platforms`, `matches`, and `games` tables. The query returned all three expected participation rows with the correct platform, game, match ID, kills, deaths, and result.
+
+The following negative tests were then run in a PostgreSQL `DO` block. Each test passed because the database rejected the invalid operation with the expected constraint:
+
+| Test | Expected database rule | Observed result |
+|---|---|---|
+| Insert the same player into the same match twice | Composite primary key on `match_players(match_id, player_id)` | Rejected; unique violation |
+| Insert a participant with a nonexistent player ID | Foreign key from `match_players.player_id` to `players.id` | Rejected; foreign-key violation |
+| Insert a negative kill count | Nonnegative statistics check constraint | Rejected; check violation |
+| Assign a Black Ops 6 map to a Black Ops 7 match | Composite foreign key matching `(map_id, game_id)` | Rejected; foreign-key violation |
+
+All four negative tests produced their expected PASS notices. This provides direct evidence that the primary key, foreign-key, check-constraint, and cross-game reference rules are enforced by PostgreSQL. These tests validate the tested cases; they are not a substitute for a broader automated regression suite.
 
 ## Troubleshooting reflection
 
