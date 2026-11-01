@@ -35,7 +35,8 @@ FROM platforms pl
 WHERE pl.code = p.platform;
 
 ALTER TABLE players
-    DROP CONSTRAINT players_unique_identity;
+    DROP CONSTRAINT players_unique_identity,
+    DROP CONSTRAINT players_platform_check;
 
 ALTER TABLE players
     ADD CONSTRAINT players_platform_id_fkey
