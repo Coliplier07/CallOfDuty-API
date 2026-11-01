@@ -96,7 +96,6 @@ erDiagram
 
 The map and mode foreign keys are composite with `game_id`. This prevents a match for one Call of Duty title from referencing a map or mode belonging to another title. `match_players` has a composite primary key of `(match_id, player_id)`, so a player can appear only once in a given match.
 
-
 ## ER diagram relationship guide
 
 Read the crow's-foot relationships in the ER diagram as follows:
@@ -223,6 +222,27 @@ The migration preserves existing player statistics and player-match performance.
 - Check constraints reject negative performance counts and invalid match results.
 - The participant primary key prevents duplicate player participation rows for one match.
 - Foreign-key deletion behavior is deliberate: deleting a player removes their dependent stats and participation rows; deleting a game removes its dependent catalog and match data.
+
+## Database integrity test results
+
+The normalized schema was tested against the local PostgreSQL `cod_stats` database using fictional sample records:
+
+- Inserted two platform records (PC and Xbox) and two sample players (Ghost#1234 and Reaper#5678).
+- Inserted two Black Ops 6 maps (Skyline and Protocol) and two game modes (Team Deathmatch and Domination).
+- Inserted one aggregate player-statistics row and two match records.
+- Inserted three player-match participation rows across those two matches.
+- Queried the joined `match_players`, `players`, `platforms`, `matches`, and `games` tables. The query returned all three expected participation rows with the correct platform, game, match ID, kills, deaths, and result.
+
+The following negative tests were then run in a PostgreSQL `DO` block. Each test passed because the database rejected the invalid operation with the expected constraint:
+
+| Test | Expected database rule | Observed result |
+|---|---|---|
+| Insert the same player into the same match twice | Composite primary key on `match_players(match_id, player_id)` | Rejected; unique violation |
+| Insert a participant with a nonexistent player ID | Foreign key from `match_players.player_id` to `players.id` | Rejected; foreign-key violation |
+| Insert a negative kill count | Nonnegative statistics check constraint | Rejected; check violation |
+| Assign a Black Ops 6 map to a Black Ops 7 match | Composite foreign key matching `(map_id, game_id)` | Rejected; foreign-key violation |
+
+All four negative tests produced their expected PASS notices. This provides direct evidence that the primary key, foreign-key, check-constraint, and cross-game reference rules are enforced by PostgreSQL. These tests validate the tested cases; they are not a substitute for a broader automated regression suite.
 
 ## Troubleshooting reflection
 
