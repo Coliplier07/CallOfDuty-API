@@ -35,9 +35,9 @@ app.get("/api/games", async (_request: Request, response: Response) => {
 app.get("/api/players/:username", async (request: Request, response: Response) => {
   const rawUsername = request.params.username;
 
-const username = Array.isArray(rawUsername)
-  ? rawUsername[0]?.trim()
-  : rawUsername?.trim();
+  const username = Array.isArray(rawUsername)
+    ? rawUsername[0]?.trim()
+    : rawUsername?.trim();
 
   if (!username) {
     response.status(400).json({
@@ -51,7 +51,7 @@ const username = Array.isArray(rawUsername)
       SELECT
         p.id,
         p.username,
-        p.platform,
+        pl.code AS platform,
         ps.game_id,
         g.slug AS game_slug,
         g.name AS game_name,
@@ -63,6 +63,7 @@ const username = Array.isArray(rawUsername)
         ps.games_played,
         ps.score
       FROM players p
+      LEFT JOIN platforms pl ON pl.id = p.platform_id
       LEFT JOIN player_stats ps ON ps.player_id = p.id
       LEFT JOIN games g ON g.id = ps.game_id
       WHERE p.normalized_username = LOWER($1)
