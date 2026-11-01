@@ -25,7 +25,7 @@ The final design contains eight tables:
 
 ```mermaid
 erDiagram
-    PLATFORMS ||--o{ PLAYERS : identifies
+    PLATFORMS o|--o{ PLAYERS : identifies
     PLAYERS ||--o{ PLAYER_STATS : owns
     GAMES ||--o{ PLAYER_STATS : summarizes
     GAMES ||--o{ MAPS : contains
